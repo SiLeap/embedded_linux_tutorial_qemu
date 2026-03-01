@@ -1,0 +1,30 @@
+# ===== 内核源码和 BusyBox 源码树 =====
+01_qemu_env_build/linux-6.1/
+01_qemu_env_build/busybox-1.36.1/
+
+# ===== 下载的源码压缩包 =====
+*.tar.xz
+*.tar.bz2
+*.tar.gz
+
+# ===== rootfs 镜像 =====
+*.cpio.gz
+
+# ===== 编译输出的二进制文件 =====
+01_qemu_env_build/hello
+
+# ===== 内核模块编译中间文件 (02_platform_driver 等) =====
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+modules.order
+Module.symvers
+.tmp_versions/
+
+# ===== 编辑器和 IDE =====
+.vscode/
+*.swp
+*.swo
+*~

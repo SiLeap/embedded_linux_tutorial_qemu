@@ -1,0 +1,9 @@
+/dts-v1/;
+/plugin/;
+
+&{/} {
+	hello_device {
+		compatible = "myvendor,hello-device";
+		status = "okay";
+	};
+};
