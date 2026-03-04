@@ -1,0 +1,10 @@
+/dts-v1/;
+/plugin/;
+
+&i2c1 {
+	fake_imu@68 {
+		compatible = "myvendor,fake-imu";
+		reg = <0x68>;
+		status = "okay";
+	};
+};
