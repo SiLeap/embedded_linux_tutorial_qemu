@@ -28,3 +28,4 @@ Module.symvers
 *.swp
 *.swo
 *~
+.claude/settings.local.json

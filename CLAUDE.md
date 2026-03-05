@@ -1,53 +1,40 @@
-# CLAUDE.md
+# CLAUDE.md — embedded_linux_tutorial_qemu
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Context
+Linux kernel driver dev on QEMU (i.MX6UL, Cortex-A7).
+- Kernel 6.1 @ 01_qemu_env_build/linux-6.1/
+- Toolchain: arm-linux-gnueabihf
+- Machine: mcimx6ul-evk / BusyBox 1.36.1 (static)
+- All user programs MUST use -static linking.
 
-## Project Purpose
+## Build
+- Env setup: run 01-05 scripts in 01_qemu_env_build/ sequentially
+- Out-of-tree module: make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- M=$(pwd) modules
+- QEMU run: bash 01_qemu_env_build/05_run_qemu.sh
 
-Linux kernel and driver development experiments using QEMU emulation for i.MX6UL/i.MX6ULL (ARM Cortex-A7).
+## Project Rules
+- Naming: module_action_object (e.g. imu_read_accel)
+- Every probe() MUST have matching remove() cleanup
+- DT compatible string MUST exactly match driver of_match_table
+- No dynamic allocation inside IRQ handlers
+- I2C/SPI transfer return values MUST be checked
 
-- **Kernel**: Linux 6.1 at `01_qemu_env_build/linux-6.1/`
-- **Toolchain**: arm-linux-gnueabihf
-- **QEMU Machine**: mcimx6ul-evk
-- **Rootfs**: BusyBox 1.36.1 (static)
+# Git Commit Rules
 
-## Quick Start
+## Behavior
+When generating git commit messages:
+- **Strictly Forbidden**: Never include text indicating the message was AI-generated (e.g., "Written by Claude", "AI-generated").
+- **No Footers**: Do not append "Signed-off-by" or "Co-authored-by" lines unless explicitly told to do so for a specific human user.
+- **Direct Output**: Output the commit message immediately without introductory text (e.g., skip "Sure, here is the commit...").
 
-Run scripts in `01_qemu_env_build/` sequentially:
-```bash
-cd 01_qemu_env_build
-bash 01_install_toolchain.sh  # Install arm-linux-gnueabihf
-bash 02_install_qemu.sh        # Install QEMU
-bash 03_build_kernel.sh        # Build kernel + DTB
-bash 04_build_rootfs.sh        # Build BusyBox rootfs
-bash 05_run_qemu.sh            # Launch QEMU
-```
+## Format Standard
+- Use the Conventional Commits format: `<type>(<scope>): <subject>`
+- Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+- Keep the first line under 72 characters.
 
-## Kernel Development
-
-**Rebuild kernel**:
-```bash
-cd 01_qemu_env_build/linux-6.1
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc) zImage dtbs
-```
-
-**Rebuild rootfs** (after adding files to `_install/`):
-```bash
-cd 01_qemu_env_build/busybox-1.36.1/_install
-find . | cpio -H newc -o | gzip > ../rootfs.cpio.gz
-```
-
-**Add test programs to rootfs**:
-```bash
-arm-linux-gnueabihf-gcc -static -o mytest mytest.c
-cp mytest 01_qemu_env_build/busybox-1.36.1/_install/
-# Then rebuild rootfs (see above)
-```
-
-## Important Notes
-
-- **Always use `-static`** when cross-compiling programs (rootfs has no shared libraries)
-- **Kernel parameter `video=off`** is required to avoid 60s boot delay (QEMU LCDIF emulation issue)
-- **QEMU exit**: `Ctrl+A` then `X`
-- **DTB location** varies by kernel version: `arch/arm/boot/dts/imx6ul-14x14-evk.dtb` or `arch/arm/boot/dts/nxp/imx/imx6ul-14x14-evk.dtb`
-
+## Known Issues
+- QEMU needs video=off kernel param → otherwise LCDIF causes 60s boot delay
+- DTB path varies: .../imx6ul-14x14-evk.dtb OR .../nxp/imx/imx6ul-14x14-evk.dtb
+- QEMU exit: Ctrl+A then X
+- QEMU overlay: .dtbo 无法运行时加载 → 使用 fdtoverlay 预先合并到 DTB
+- Notion MCP: 创建页面报错 MCP -32603 → 使用 parent.database_id 而非 data_source_id

@@ -14,7 +14,12 @@
       "Bash(timeout 15 qemu-system-arm -machine mcimx6ul-evk -m 512M -kernel linux-6.1/arch/arm/boot/zImage -dtb linux-6.1/arch/arm/boot/dts/imx6ul-14x14-evk.dtb -initrd busybox-1.36.1/rootfs.cpio.gz -append \"console=ttymxc1,115200 root=/dev/ram rdinit=/sbin/init\" -nographic)",
       "Bash(timeout 15 qemu-system-arm -machine mcimx6ul-evk -m 512M -kernel linux-6.1/arch/arm/boot/zImage -dtb linux-6.1/arch/arm/boot/dts/imx6ul-14x14-evk.dtb -initrd busybox-1.36.1/rootfs.cpio.gz -append \"console=ttymxc0,115200 earlycon root=/dev/ram rdinit=/sbin/init\" -nographic -serial null -serial mon:stdio)",
       "Bash(timeout 10 qemu-system-arm -machine mcimx6ul-evk -m 512M -kernel linux-6.1/arch/arm/boot/zImage -dtb linux-6.1/arch/arm/boot/dts/imx6ul-14x14-evk.dtb -initrd busybox-1.36.1/rootfs.cpio.gz -append \"console=ttymxc0,115200 root=/dev/ram rdinit=/sbin/init\" -nographic -d unimp)",
-      "Bash(timeout 15 qemu-system-arm -machine sabrelite -cpu cortex-a9 -m 512M -kernel linux-6.1/arch/arm/boot/zImage -dtb linux-6.1/arch/arm/boot/dts/imx6q-sabrelite.dtb -initrd busybox-1.36.1/rootfs.cpio.gz -append \"console=ttymxc1,115200 root=/dev/ram rdinit=/sbin/init\" -nographic -serial null -serial mon:stdio)"
+      "Bash(timeout 15 qemu-system-arm -machine sabrelite -cpu cortex-a9 -m 512M -kernel linux-6.1/arch/arm/boot/zImage -dtb linux-6.1/arch/arm/boot/dts/imx6q-sabrelite.dtb -initrd busybox-1.36.1/rootfs.cpio.gz -append \"console=ttymxc1,115200 root=/dev/ram rdinit=/sbin/init\" -nographic -serial null -serial mon:stdio)",
+      "mcp__notion__API-query-data-source",
+      "Bash(cpio:*)",
+      "Bash(chmod:*)",
+      "Bash(gzip:*)",
+      "Bash(timeout 15 qemu-system-arm:*)"
     ]
   }
 }
