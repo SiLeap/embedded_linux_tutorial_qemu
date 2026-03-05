@@ -54,6 +54,7 @@ static int fake_audio_probe(struct platform_device *pdev)
 
 	dai_link->cpus->of_node = cpu_np;
 	dai_link->codecs->of_node = codec_np;
+	dai_link->codecs->dai_name = "fake-codec-dai";
 	dai_link->platforms->of_node = cpu_np;
 
 	ret = devm_snd_soc_register_card(dev, &fake_audio_card);
