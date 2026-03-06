@@ -234,19 +234,68 @@ cat /proc/asound/pcm
 
 ```bash
 rmmod fake_audio_card
+rmmod fake_platform
 rmmod fake_codec
 ```
+
+## DMA 功能验证
+
+### 验证 Platform 驱动加载
+
+```bash
+dmesg | grep -i "fake.*platform\|DMA\|hrtimer"
+```
+
+预期输出:
+```
+fake-i2s-platform fake_i2s_platform: fake_platform probe
+fake-i2s-platform fake_i2s_platform: DMA buffer allocated: 4096 frames @ 48000 Hz, period 1024 frames
+fake-i2s-platform fake_i2s_platform: hrtimer started
+```
+
+### 验证 hrtimer 周期计算
+
+hrtimer 周期 = (period_size / sample_rate) 秒
+
+示例: 1024 frames @ 48kHz = 21.33ms
+
+### 触发 DMA 路径（可选）
+
+如果 rootfs 包含 aplay:
+```bash
+aplay -D hw:0,0 /dev/zero -d 1 -f S16_LE -r 16000 -c 2
+```
+
+观察 dmesg 应显示:
+- "DMA buffer allocated" 消息
+- "hrtimer started" 消息
+- 播放期间 pointer 回调被调用
+- "hrtimer stopped" 消息
+
+### 验证资源清理
+
+```bash
+rmmod fake_audio_card
+rmmod fake_platform
+rmmod fake_codec
+dmesg | tail -10
+```
+
+确认无内存泄漏或资源未释放警告。
 
 ## 验证清单
 
 参考 Notion 教程 §9
 
-- [ ] `make` 编译无 warning，产出两个 .ko 文件
+- [ ] `make` 编译无 warning，产出三个 .ko 文件
 - [ ] `insmod fake_codec.ko` 后 dmesg 显示 "probe OK, addr=0x1a"
+- [ ] `insmod fake_platform.ko` 后 dmesg 显示 "fake_platform probe"
 - [ ] `insmod fake_audio_card.ko` 后 dmesg 显示 "registered OK"
+- [ ] dmesg 显示 "DMA buffer allocated" 和 hrtimer 相关日志
 - [ ] `/proc/asound/cards` 显示 FakeAudioCard
 - [ ] `/proc/asound/pcm` 显示 Fake-Audio-HiFi 设备
-- [ ] 卸载顺序正确（先 machine 后 codec）
+- [ ] 卸载顺序正确（card → platform → codec）
+- [ ] rmmod 后无资源泄漏警告
 - [ ] `rmmod` 后 dmesg 显示 remove 日志
 
 ## 常见问题排查

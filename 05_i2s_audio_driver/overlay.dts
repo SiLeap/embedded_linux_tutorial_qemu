@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay for Fake Audio Driver
+ * Reference implementation showing required nodes
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			fake_i2s_platform: fake_i2s_platform {
+				compatible = "myvendor,fake-i2s-platform";
+				#sound-dai-cells = <0>;
+				status = "okay";
+			};
+
+			fake-audio-card {
+				compatible = "myvendor,fake-audio-card";
+				audio-cpu = <&sai2>;
+				audio-codec = <&fake_codec>;
+				audio-platform = <&fake_i2s_platform>;
+				status = "okay";
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			fake_codec: fake_codec@1a {
+				compatible = "myvendor,fake-codec";
+				reg = <0x1a>;
+				status = "okay";
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&sai2>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};
