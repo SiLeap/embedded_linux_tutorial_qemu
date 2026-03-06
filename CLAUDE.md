@@ -25,3 +25,4 @@ Linux kernel driver dev on QEMU (i.MX6UL, Cortex-A7).
 - QEMU exit: Ctrl+A then X
 - QEMU overlay: .dtbo 无法运行时加载 → 使用 fdtoverlay 预先合并到 DTB
 - Notion MCP: 创建页面报错 MCP -32603 → 使用 parent.database_id 而非 data_source_id
+- Device Tree: overlay.dts 仅作参考查看，实际 DTB 修改通过 build.sh 中 Python 脚本完成
