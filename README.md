@@ -7,6 +7,7 @@
 - `01_qemu_env_build/` - QEMU 环境搭建（内核、rootfs、工具链）
 - `02_platform_driver/` - 平台设备驱动入门（Platform Driver Hello World）
 - `03_i2c_imu_driver/` - I2C IMU 驱动实战（IIO 子系统 + I2C 总线）
+- `05_i2s_audio_driver/` - I2S Audio 驱动实战（ASoC 子系统 + I2C Codec）
 
 ## 快速开始
 
