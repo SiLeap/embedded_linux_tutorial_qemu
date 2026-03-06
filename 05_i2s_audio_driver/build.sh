@@ -14,6 +14,7 @@ make clean
 make
 
 [ ! -f "fake_codec.ko" ] && { echo "Error: fake_codec.ko not built"; exit 1; }
+[ ! -f "fake_cpu_dai.ko" ] && { echo "Error: fake_cpu_dai.ko not built"; exit 1; }
 [ ! -f "fake_platform.ko" ] && { echo "Error: fake_platform.ko not built"; exit 1; }
 [ ! -f "fake_audio_card.ko" ] && { echo "Error: fake_audio_card.ko not built"; exit 1; }
 
@@ -23,76 +24,71 @@ dtc -I dtb -O dts "$BASE_DTB" -o base.dts
 
 python3 << 'PYEOF'
 with open('base.dts', 'r') as f:
-    lines = f.readlines()
+    content = f.read()
 
-output = []
-i2c_inserted = False
-root_inserted = False
-platform_inserted = False
-sai2_labeled = False
-i2c_depth = 0
-in_root = False
-depth = 0
-
-for line in lines:
-    # Add label to sai@202c000 node
-    if 'sai@202c000 {' in line and not sai2_labeled:
-        line = line.replace('sai@202c000 {', 'sai2: sai@202c000 {')
-        sai2_labeled = True
-
-    # Track root node
-    if '/ {' in line:
-        in_root = True
-        depth = 1
-        output.append(line)
-        continue
-    elif in_root:
-        if '{' in line:
+# Insert fake_cpu_dai and fake_i2s_platform into /soc node
+soc_start = content.find('soc {')
+if soc_start == -1:
+    soc_start = content.find('soc@')
+if soc_start != -1:
+    depth = 0
+    i = soc_start
+    while i < len(content):
+        if content[i] == '{':
             depth += 1
-        if '}' in line:
+        elif content[i] == '}':
             depth -= 1
-            # Insert fake_i2s_platform before fake-audio-card
-            if depth == 1 and not platform_inserted:
-                indent = '\t'
-                output.append(f'{indent}fake_i2s_platform: fake_i2s_platform {{\n')
-                output.append(f'{indent}\tcompatible = "myvendor,fake-i2s-platform";\n')
-                output.append(f'{indent}\t#sound-dai-cells = <0>;\n')
-                output.append(f'{indent}\tstatus = "okay";\n')
-                output.append(f'{indent}}};\n\n')
-                platform_inserted = True
-            # Insert fake-audio-card before final root closing brace
-            if depth == 0 and not root_inserted:
-                indent = '\t'
-                output.append(f'{indent}fake-audio-card {{\n')
-                output.append(f'{indent}\tcompatible = "myvendor,fake-audio-card";\n')
-                output.append(f'{indent}\taudio-cpu = <&sai2>;\n')
-                output.append(f'{indent}\taudio-codec = <&fake_codec>;\n')
-                output.append(f'{indent}\taudio-platform = <&fake_i2s_platform>;\n')
-                output.append(f'{indent}\tstatus = "okay";\n')
-                output.append(f'{indent}}};\n\n')
-                root_inserted = True
+            if depth == 0:
+                nodes = '''\t\tfake_cpu_dai: fake_cpu_dai {
+\t\t\tcompatible = "myvendor,fake-cpu-dai";
+\t\t\t#sound-dai-cells = <0>;
+\t\t};
 
-    output.append(line)
+\t\tfake_i2s_platform: fake_i2s_platform {
+\t\t\tcompatible = "myvendor,fake-i2s-platform";
+\t\t\t#sound-dai-cells = <0>;
+\t\t};
 
-    # Insert fake_codec into i2c@21a0000
-    if 'i2c@21a0000' in line and '{' in line:
-        i2c_depth = 1
-    elif i2c_depth > 0:
-        if '{' in line:
-            i2c_depth += 1
-        if '}' in line:
-            i2c_depth -= 1
-            if i2c_depth == 0 and not i2c_inserted:
-                indent = '\t\t'
-                output.insert(-1, f'{indent}fake_codec: fake_codec@1a {{\n')
-                output.insert(-1, f'{indent}\tcompatible = "myvendor,fake-codec";\n')
-                output.insert(-1, f'{indent}\treg = <0x1a>;\n')
-                output.insert(-1, f'{indent}\tstatus = "okay";\n')
-                output.insert(-1, f'{indent}}};\n\n')
-                i2c_inserted = True
+\t'''
+                content = content[:i] + nodes + content[i:]
+                break
+        i += 1
+
+# Insert fake_codec into i2c@21a0000
+i2c_start = content.find('i2c@21a0000 {')
+if i2c_start != -1:
+    depth = 0
+    i = i2c_start
+    while i < len(content):
+        if content[i] == '{':
+            depth += 1
+        elif content[i] == '}':
+            depth -= 1
+            if depth == 0:
+                codec_node = '''\t\t\tfake_codec: fake_codec@1b {
+\t\t\t\tcompatible = "myvendor,fake-codec";
+\t\t\t\treg = <0x1b>;
+\t\t\t};
+
+\t\t\t'''
+                content = content[:i] + codec_node + content[i:]
+                break
+        i += 1
+
+# Insert fake-audio-card at root level (before final };)
+last_brace = content.rfind('\n};')
+if last_brace != -1:
+    card_node = '''\n\tfake-audio-card {
+\t\tcompatible = "myvendor,fake-audio-card";
+\t\taudio-cpu = <&fake_cpu_dai>;
+\t\taudio-codec = <&fake_codec>;
+\t\taudio-platform = <&fake_i2s_platform>;
+\t};
+'''
+    content = content[:last_brace] + card_node + content[last_brace:]
 
 with open('base.dts', 'w') as f:
-    f.writelines(output)
+    f.write(content)
 PYEOF
 
 dtc -I dts -O dtb -o "$MERGED_DTB" base.dts
@@ -100,7 +96,7 @@ rm -f base.dts
 
 echo "=== Copying modules to rootfs ==="
 mkdir -p "$ROOTFS_DIR/lib/modules"
-cp fake_codec.ko fake_platform.ko fake_audio_card.ko "$ROOTFS_DIR/lib/modules/"
+cp fake_codec.ko fake_cpu_dai.ko fake_platform.ko fake_audio_card.ko load_audio.sh "$ROOTFS_DIR/lib/modules/"
 
 echo "=== Repackaging rootfs ==="
 cd "$ROOTFS_DIR"

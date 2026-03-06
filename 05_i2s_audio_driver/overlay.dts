@@ -11,42 +11,42 @@
 	compatible = "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
 
 	fragment@0 {
-		target-path = "/";
+		target-path = "/soc";
 		__overlay__ {
+			fake_cpu_dai: fake_cpu_dai {
+				compatible = "myvendor,fake-cpu-dai";
+				#sound-dai-cells = <0>;
+			};
+
 			fake_i2s_platform: fake_i2s_platform {
 				compatible = "myvendor,fake-i2s-platform";
 				#sound-dai-cells = <0>;
-				status = "okay";
-			};
-
-			fake-audio-card {
-				compatible = "myvendor,fake-audio-card";
-				audio-cpu = <&sai2>;
-				audio-codec = <&fake_codec>;
-				audio-platform = <&fake_i2s_platform>;
-				status = "okay";
 			};
 		};
 	};
 
 	fragment@1 {
-		target = <&i2c1>;
+		target-path = "/";
 		__overlay__ {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			fake_codec: fake_codec@1a {
-				compatible = "myvendor,fake-codec";
-				reg = <0x1a>;
-				status = "okay";
+			fake-audio-card {
+				compatible = "myvendor,fake-audio-card";
+				audio-cpu = <&fake_cpu_dai>;
+				audio-codec = <&fake_codec>;
+				audio-platform = <&fake_i2s_platform>;
 			};
 		};
 	};
 
 	fragment@2 {
-		target = <&sai2>;
+		target = <&i2c1>;
 		__overlay__ {
-			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			fake_codec: fake_codec@1b {
+				compatible = "myvendor,fake-codec";
+				reg = <0x1b>;
+			};
 		};
 	};
 };

@@ -30,7 +30,7 @@ bash run_qemu.sh   # 启动 QEMU
 QEMU 内验证:
 
 ```bash
-sh /lib/modules/verify_audio.sh
+sh /lib/modules/load_audio.sh
 # 或手动验证:
 insmod /lib/modules/fake_codec.ko
 insmod /lib/modules/fake_platform.ko
@@ -38,6 +38,8 @@ insmod /lib/modules/fake_audio_card.ko
 cat /proc/asound/cards
 cat /proc/asound/pcm
 ```
+
+**重要**: 必须按照 codec → platform → machine 的顺序加载模块，否则会出现 -517 (EPROBE_DEFER) 错误。
 
 退出 QEMU: `Ctrl+A` 然后按 `X`
 
@@ -304,6 +306,7 @@ dmesg | tail -10
 
 | 现象 | 原因 | 解决方案 |
 |------|------|----------|
+| **Failed to register card: -517** | **Platform 驱动未加载** | **必须先加载 fake_platform.ko** |
 | insmod fake_audio_card 失败 "No such device" | Codec 未加载或 DTB 缺少节点 | 先加载 fake_codec.ko，检查 dmesg |
 | /proc/asound/cards 为空 | Machine 驱动 probe 失败 | `dmesg \| grep fake` 查看错误 |
 | "asoc-audio-graph-card" 相关错误 | DAI link 配置错误 | 确认 codec_dai_name 设置正确 |
@@ -311,6 +314,31 @@ dmesg | tail -10
 | rmmod 时 "Device or resource busy" | 声卡正在使用 | 先卸载 machine 驱动 |
 | Python 脚本报错 | DTB 路径不正确 | 检查 BASE_DTB 变量 |
 | QEMU 启动 60s 延迟 | LCDIF 驱动问题 | 确认使用 `video=off` 内核参数 |
+
+### 错误 -517 (EPROBE_DEFER) 详解
+
+**错误代码**: -517 = EPROBE_DEFER
+
+**含义**: 驱动 probe 时发现依赖的组件尚未就绪，内核会稍后重试。
+
+**ASoC Machine 驱动的三个依赖**:
+1. CPU DAI (audio-cpu): &sai2 → 需要内核 fsl_sai 驱动
+2. Codec (audio-codec): &fake_codec → 需要 fake_codec.ko
+3. Platform (audio-platform): &fake_i2s_platform → 需要 fake_platform.ko
+
+**正确的加载顺序**:
+```bash
+insmod /lib/modules/fake_codec.ko      # 1. Codec 层
+insmod /lib/modules/fake_platform.ko   # 2. Platform 层
+insmod /lib/modules/fake_audio_card.ko # 3. Machine 层（最后）
+```
+
+**为什么顺序重要**:
+- Machine 驱动在 probe 时会调用 `devm_snd_soc_register_card()`
+- ASoC 核心会尝试绑定 CPU DAI、Codec、Platform 三个组件
+- 如果任何一个组件未注册，返回 -EPROBE_DEFER
+- 内核会将该设备加入 deferred probe 队列，稍后重试
+- 如果依赖永远不加载，probe 永远不会成功
 
 ## 迁移到真实硬件
 
