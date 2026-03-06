@@ -12,29 +12,35 @@ insmod /lib/modules/fake_codec.ko
 sleep 1
 
 echo ""
-echo "Step 3: Load fake_audio_card module"
+echo "Step 3: Load fake_platform module"
+insmod /lib/modules/fake_platform.ko
+sleep 1
+
+echo ""
+echo "Step 4: Load fake_audio_card module"
 insmod /lib/modules/fake_audio_card.ko
 sleep 1
 
 echo ""
-echo "Step 4: Check dmesg for driver messages"
-dmesg | grep -E "fake_codec|fake.*audio|ASoC"
+echo "Step 5: Check dmesg for driver messages"
+dmesg | grep -E "fake_codec|fake.*platform|fake.*audio|ASoC|DMA|hrtimer"
 
 echo ""
-echo "Step 5: Check ALSA sound cards"
+echo "Step 6: Check ALSA sound cards"
 cat /proc/asound/cards 2>/dev/null || echo "No sound cards found"
 
 echo ""
-echo "Step 6: Check PCM devices"
+echo "Step 7: Check PCM devices"
 cat /proc/asound/pcm 2>/dev/null || echo "No PCM devices found"
 
 echo ""
-echo "Step 7: Unload modules"
+echo "Step 8: Unload modules"
 rmmod fake_audio_card
+rmmod fake_platform
 rmmod fake_codec
 
 echo ""
-echo "Step 8: Check remove messages"
+echo "Step 9: Check remove messages"
 dmesg | tail -5
 
 echo ""

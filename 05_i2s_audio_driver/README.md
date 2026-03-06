@@ -33,6 +33,7 @@ QEMU 内验证:
 sh /lib/modules/verify_audio.sh
 # 或手动验证:
 insmod /lib/modules/fake_codec.ko
+insmod /lib/modules/fake_platform.ko
 insmod /lib/modules/fake_audio_card.ko
 cat /proc/asound/cards
 cat /proc/asound/pcm
@@ -45,6 +46,7 @@ cat /proc/asound/pcm
 ```
 05_i2s_audio_driver/
 ├── fake_codec.c           # I2C ASoC Codec 驱动
+├── fake_platform.c        # ASoC Platform 驱动（hrtimer DMA 模拟）
 ├── fake_audio_card.c      # ASoC Machine 驱动
 ├── Makefile               # 外部模块编译配置
 ├── overlay.dts            # 设备树 overlay（参考）
@@ -74,8 +76,8 @@ cat /proc/asound/pcm
 │  Layer   │ │  Layer   │ │  Layer   │
 └──────────┘ └──────────┘ └──────────┘
      ↓            ↓            ↓
-  DAI Link     CPU DAI      I2C Bus
-(fake_audio)   (SAI2)    (fake_codec)
+  DAI Link     DMA/PCM      I2C Bus
+(fake_audio) (fake_platform) (fake_codec)
 ```
 
 ### 三层职责
@@ -86,15 +88,16 @@ cat /proc/asound/pcm
 - 提供 DAI 操作回调：`hw_params`, `set_fmt`
 - 定义支持的音频格式、采样率、通道数
 
-**Platform Layer (内核内置)**
-- 管理 CPU 侧的音频接口（SAI2）
-- 处理 DMA 传输和缓冲区管理
-- 本例使用 i.MX6UL 内核自带的 fsl-sai 驱动
+**Platform Layer (fake_platform.c)**
+- 管理 DMA 缓冲区和 PCM 操作
+- 使用 hrtimer 模拟 DMA period elapsed 中断
+- 实现 `snd_pcm_ops`：open/close/hw_params/trigger/pointer
+- 提供 VMALLOC 类型的音频缓冲区（QEMU 无真实 DMA）
 
 **Machine Layer (fake_audio_card.c)**
 - 连接 Codec 和 Platform
 - 定义 DAI link 配置（I2S 格式、时钟主从）
-- 通过设备树解析 `audio-cpu` 和 `audio-codec` phandle
+- 通过设备树解析 `audio-cpu`、`audio-codec` 和 `audio-platform` phandle
 - 注册 `snd_soc_card` 到 ASoC 核心
 
 ## 驱动源码详解

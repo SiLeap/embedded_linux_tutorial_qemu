@@ -14,6 +14,7 @@ make clean
 make
 
 [ ! -f "fake_codec.ko" ] && { echo "Error: fake_codec.ko not built"; exit 1; }
+[ ! -f "fake_platform.ko" ] && { echo "Error: fake_platform.ko not built"; exit 1; }
 [ ! -f "fake_audio_card.ko" ] && { echo "Error: fake_audio_card.ko not built"; exit 1; }
 
 echo "=== Creating modified DTB with audio devices ==="
@@ -27,6 +28,7 @@ with open('base.dts', 'r') as f:
 output = []
 i2c_inserted = False
 root_inserted = False
+platform_inserted = False
 sai2_labeled = False
 i2c_depth = 0
 in_root = False
@@ -42,11 +44,22 @@ for line in lines:
     if '/ {' in line:
         in_root = True
         depth = 1
+        output.append(line)
+        continue
     elif in_root:
         if '{' in line:
             depth += 1
         if '}' in line:
             depth -= 1
+            # Insert fake_i2s_platform before fake-audio-card
+            if depth == 1 and not platform_inserted:
+                indent = '\t'
+                output.append(f'{indent}fake_i2s_platform: fake_i2s_platform {{\n')
+                output.append(f'{indent}\tcompatible = "myvendor,fake-i2s-platform";\n')
+                output.append(f'{indent}\t#sound-dai-cells = <0>;\n')
+                output.append(f'{indent}\tstatus = "okay";\n')
+                output.append(f'{indent}}};\n\n')
+                platform_inserted = True
             # Insert fake-audio-card before final root closing brace
             if depth == 0 and not root_inserted:
                 indent = '\t'
@@ -54,6 +67,7 @@ for line in lines:
                 output.append(f'{indent}\tcompatible = "myvendor,fake-audio-card";\n')
                 output.append(f'{indent}\taudio-cpu = <&sai2>;\n')
                 output.append(f'{indent}\taudio-codec = <&fake_codec>;\n')
+                output.append(f'{indent}\taudio-platform = <&fake_i2s_platform>;\n')
                 output.append(f'{indent}\tstatus = "okay";\n')
                 output.append(f'{indent}}};\n\n')
                 root_inserted = True
@@ -86,7 +100,7 @@ rm -f base.dts
 
 echo "=== Copying modules to rootfs ==="
 mkdir -p "$ROOTFS_DIR/lib/modules"
-cp fake_codec.ko fake_audio_card.ko "$ROOTFS_DIR/lib/modules/"
+cp fake_codec.ko fake_platform.ko fake_audio_card.ko "$ROOTFS_DIR/lib/modules/"
 
 echo "=== Repackaging rootfs ==="
 cd "$ROOTFS_DIR"

@@ -33,7 +33,7 @@ static struct snd_soc_card fake_audio_card = {
 static int fake_audio_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *cpu_np, *codec_np;
+	struct device_node *cpu_np, *codec_np, *platform_np;
 	struct snd_soc_dai_link *dai_link = &fake_audio_dai_link;
 	int ret;
 
@@ -52,16 +52,25 @@ static int fake_audio_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	platform_np = of_parse_phandle(dev->of_node, "audio-platform", 0);
+	if (!platform_np) {
+		dev_err(dev, "Failed to parse audio-platform phandle\n");
+		of_node_put(cpu_np);
+		of_node_put(codec_np);
+		return -EINVAL;
+	}
+
 	dai_link->cpus->of_node = cpu_np;
 	dai_link->codecs->of_node = codec_np;
 	dai_link->codecs->dai_name = "fake-codec-dai";
-	dai_link->platforms->of_node = cpu_np;
+	dai_link->platforms->of_node = platform_np;
 
 	ret = devm_snd_soc_register_card(dev, &fake_audio_card);
 	if (ret) {
 		dev_err(dev, "Failed to register card: %d\n", ret);
 		of_node_put(cpu_np);
 		of_node_put(codec_np);
+		of_node_put(platform_np);
 		return ret;
 	}
 
@@ -69,6 +78,7 @@ static int fake_audio_probe(struct platform_device *pdev)
 
 	of_node_put(cpu_np);
 	of_node_put(codec_np);
+	of_node_put(platform_np);
 
 	return 0;
 }
